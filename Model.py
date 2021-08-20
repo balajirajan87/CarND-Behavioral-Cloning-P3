@@ -22,8 +22,7 @@ with open('./Datasets/Master_driving_log_new.csv') as csvfile:
         samples.append(line)
 
 samples_shuffled = shuffle(samples)
-
-train_samples, validation_samples = train_test_split(samples_shuffled, test_size=0.2)
+train_samples, validation_samples = train_test_split(samples_shuffled, test_size=0.1)
 
 def generator(samples, batch_size=32):
     num_samples = len(samples)
@@ -73,7 +72,7 @@ train_generator = generator(train_samples, batch_size=batch_size)
 validation_generator = generator(validation_samples, batch_size=batch_size)
 
 # when accuracy reaches ACCURACY_THRESHOLD
-LOSS_THRESHOLD = 0.06
+LOSS_THRESHOLD = 0.03
 
 class myCallback(Callback):
     def on_epoch_end(self, epoch, logs={}):
@@ -89,13 +88,25 @@ model.add(Cropping2D(cropping=((50,20),(0,0))))
 model.add(Convolution2D(24,3,3,subsample=(2,2),activation="elu"))
 model.add(Convolution2D(48,3,3,subsample=(2,2),activation="elu"))
 model.add(MaxPooling2D(pool_size=(4, 4), strides=4))
-model.add(Dropout(0.25))
+model.add(Dropout(0.2))
 model.add(Flatten())
 model.add(Dense(50,activation="elu"))
 model.add(Dense(10))
 model.add(Dense(1))
-model.compile(loss='mse', optimizer='adam',metrics=[metrics.mean_squared_error])
-model.fit_generator(train_generator,steps_per_epoch=np.ceil(len(train_samples)/batch_size),validation_data=validation_generator,validation_steps=np.ceil(len(validation_samples)/batch_size),epochs=20, verbose=1, callbacks=[callbacks])
+opt = adam(lr=0.0001)
+model.compile(loss='mse', optimizer=opt,metrics=[metrics.mean_squared_error])
+history_object = model.fit_generator(train_generator,steps_per_epoch=np.ceil(len(train_samples)/batch_size),validation_data=validation_generator,validation_steps=np.ceil(len(validation_samples)/batch_size),epochs=10, verbose=1, callbacks=[callbacks])
 print("saving the model")
 model.save('model.h5')
+### print the keys contained in the history object
+print(history_object.history.keys())
+
+### plot the training and validation loss for each epoch
+plt.plot(history_object.history['loss'])
+plt.plot(history_object.history['val_loss'])
+plt.title('model mean squared error loss')
+plt.ylabel('mean squared error loss')
+plt.xlabel('epoch')
+plt.legend(['training set', 'validation set'], loc='upper right')
+plt.savefig('lossimage.png')
 exit()
